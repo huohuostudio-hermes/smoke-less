@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#000000">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="熄火">
+<title>熄火</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180.png">
+<style>
+:root{
+  --bg:#000;
+  --card:#0e0e10;
+  --card2:#15151a;
+  --accent:#ff7a2f;
+  --accent2:#ffa566;
+  --danger:#ff5c5c;
+  --ok:#4ade80;
+  --text:#f2ece4;
+  --muted:#8a847c;
+  --border:rgba(255,122,47,.22);
+  --gold:#e6b84a;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue",sans-serif;
+  -webkit-font-smoothing:antialiased;overflow-x:hidden;min-height:100%}
+body{
+  background:radial-gradient(1200px 600px at 50% -200px, rgba(255,122,47,.14), transparent 60%), var(--bg);
+  padding:0 20px calc(env(safe-area-inset-bottom) + 20px);
+}
+#app{max-width:480px;margin:0 auto}
+
+/* ===== 顶栏 ===== */
+header{display:flex;align-items:center;justify-content:space-between;
+  padding:18px 0 8px;position:relative}
+.brand{display:flex;align-items:center;gap:10px}
+.brand .fire{font-size:22px;filter:drop-shadow(0 0 6px rgba(255,122,47,.6))}
+.brand h1{font-size:20px;margin:0;font-weight:700;letter-spacing:.5px}
+.brand .sub{font-size:11px;color:var(--muted);letter-spacing:2px}
+.gear{width:40px;height:40px;border-radius:50%;border:1px solid var(--border);
+  background:var(--card);color:var(--muted);font-size:18px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;transition:transform .3s}
+.gear:active{transform:rotate(60deg)}
+
+/* ===== 计数主区 ===== */
+.counter-wrap{text-align:center;padding:26px 0 10px}
+.count-num{font-size:96px;font-weight:800;line-height:1;letter-spacing:-2px;
+  background:linear-gradient(180deg,#fff,#ffb380);-webkit-background-clip:text;background-clip:text;
+  -webkit-text-fill-color:transparent;transition:color .3s}
+.count-num.over{background:linear-gradient(180deg,#ffd0c0,#ff5c5c);-webkit-background-clip:text;background-clip:text}
+.count-label{color:var(--muted);font-size:14px;margin-top:6px;letter-spacing:1px}
+.goal-bar{width:min(240px,70%);height:6px;border-radius:3px;background:var(--card2);
+  margin:18px auto 8px;overflow:hidden}
+.goal-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--accent),var(--accent2));
+  transition:width .4s;box-shadow:0 0 10px rgba(255,122,47,.5)}
+.goal-fill.over{background:linear-gradient(90deg,#ff5c5c,#ff8a8a);box-shadow:0 0 10px rgba(255,92,92,.5)}
+.goal-text{font-size:12px;color:var(--muted);letter-spacing:1px}
+.goal-text.over{color:var(--danger);font-weight:600}
+
+/* ===== 主按钮 ===== */
+.btn-smoke{margin:26px auto 6px;display:block;width:200px;height:200px;border-radius:50%;
+  border:none;cursor:pointer;position:relative;
+  background:radial-gradient(circle at 35% 30%, rgba(255,122,47,.35), rgba(255,122,47,.06));
+  box-shadow:0 0 0 2px var(--border), 0 0 40px rgba(255,122,47,.25), inset 0 0 40px rgba(255,122,47,.12);
+  color:var(--text);font-size:22px;font-weight:700;letter-spacing:1px;
+  transition:transform .12s, box-shadow .3s;
+  -webkit-user-select:none;user-select:none}
+.btn-smoke:active{transform:scale(.95);box-shadow:0 0 0 2px var(--border), 0 0 70px rgba(255,122,47,.45)}
+.btn-smoke .btn-hint{display:block;font-size:12px;font-weight:400;color:var(--muted);margin-top:6px;letter-spacing:1px}
+.btn-smoke.over{box-shadow:0 0 0 2px rgba(255,92,92,.4), 0 0 40px rgba(255,92,92,.3), inset 0 0 40px rgba(255,92,92,.14)}
+.btn-smoke.over .btn-hint{color:var(--danger)}
+
+/* 点击涟漪 */
+@keyframes puff{0%{transform:scale(.9);opacity:1}100%{transform:scale(1.6);opacity:0}}
+.puff{position:absolute;inset:0;border-radius:50%;border:2px solid var(--accent);animation:puff .5s ease-out forwards;pointer-events:none}
+
+.undo-row{text-align:center;min-height:30px}
+.undo-btn{font-size:13px;color:var(--muted);text-decoration:underline;cursor:pointer;background:none;border:none;padding:4px 8px}
+.undo-btn:active{color:var(--text)}
+
+/* ===== 时间线 ===== */
+.tl-title{font-size:12px;color:var(--muted);letter-spacing:2px;margin:26px 0 10px;
+  display:flex;align-items:center;justify-content:space-between}
+.tl{list-style:none;margin:0;padding:0}
+.tl li{display:flex;align-items:center;gap:10px;padding:9px 4px;border-bottom:1px solid rgba(255,255,255,.04);
+  font-size:14px}
+.tl .dot{width:8px;height:8px;border-radius:50%;background:var(--accent);flex:none;
+  box-shadow:0 0 6px rgba(255,122,47,.6)}
+.tl .idx{color:var(--muted);font-size:12px;width:44px;flex:none}
+.tl .time{font-variant-numeric:tabular-nums}
+.tl .gap{margin-left:auto;color:var(--muted);font-size:12px}
+.tl .empty{color:var(--muted);text-align:center;padding:24px 0;font-size:13px}
+
+/* ===== 7 天趋势 ===== */
+.trend{display:flex;align-items:flex-end;justify-content:space-between;gap:6px;height:80px;
+  padding:0 4px;margin-top:4px}
+.trend .day{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px}
+.trend .bar{width:100%;max-width:26px;border-radius:4px 4px 0 0;background:linear-gradient(180deg,var(--accent2),var(--accent));
+  min-height:3px;transition:height .4s;box-shadow:0 0 8px rgba(255,122,47,.25)}
+.trend .bar.today{box-shadow:0 0 12px rgba(255,122,47,.6)}
+.trend .lbl{font-size:10px;color:var(--muted)}
+.trend .lbl.today{color:var(--accent2);font-weight:600}
+.trend .v{font-size:10px;color:var(--muted);font-variant-numeric:tabular-nums}
+
+/* ===== 通用视图 ===== */
+.view{display:none}
+.view.active{display:block;animation:fadein .25s ease}
+@keyframes fadein{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* ===== 设置页 ===== */
+.set-head{display:flex;align-items:center;gap:12px;padding:16px 0}
+.back-btn{width:36px;height:36px;border-radius:50%;border:1px solid var(--border);
+  background:var(--card);color:var(--text);font-size:16px;cursor:pointer}
+.set-head h2{margin:0;font-size:18px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;
+  padding:16px;margin:12px 0}
+.card h3{margin:0 0 12px;font-size:14px;color:var(--accent2);letter-spacing:1px}
+.row{display:flex;align-items:center;justify-content:space-between;padding:8px 0}
+.row .lbl{font-size:14px}
+.row .hint{font-size:11px;color:var(--muted);margin-top:2px}
+.row input[type=number]{width:64px;background:var(--card2);border:1px solid var(--border);
+  color:var(--text);border-radius:8px;padding:8px 10px;font-size:16px;text-align:center}
+/* 开关 */
+.switch{position:relative;width:52px;height:30px;flex:none}
+.switch input{opacity:0;width:0;height:0}
+.switch .slider{position:absolute;inset:0;border-radius:15px;background:var(--card2);
+  border:1px solid var(--border);transition:.25s;cursor:pointer}
+.switch .slider:before{content:"";position:absolute;width:22px;height:22px;border-radius:50%;
+  left:3px;top:3px;background:var(--muted);transition:.25s}
+.switch input:checked + .slider{background:rgba(255,122,47,.25)}
+.switch input:checked + .slider:before{transform:translateX(22px);background:var(--accent);
+  box-shadow:0 0 8px rgba(255,122,47,.6)}
+.btn{display:block;width:100%;padding:13px;border-radius:12px;border:1px solid var(--border);
+  background:var(--card2);color:var(--text);font-size:15px;cursor:pointer;margin:8px 0;letter-spacing:1px}
+.btn:active{background:var(--card)}
+.btn.danger{color:var(--danger);border-color:rgba(255,92,92,.35)}
+.btn.primary{background:linear-gradient(90deg,var(--accent),var(--accent2));color:#1a0e04;
+  font-weight:700;border:none;box-shadow:0 4px 16px rgba(255,122,47,.3)}
+
+/* ===== 倒计时页 ===== */
+.buffer-wrap{text-align:center;padding-top:40px}
+.buffer-note{color:var(--muted);font-size:14px;letter-spacing:1px;margin-bottom:6px}
+.buffer-gap{font-size:13px;color:var(--accent2);margin-bottom:30px}
+.buffer-timer{font-size:88px;font-weight:800;letter-spacing:2px;
+  font-variant-numeric:tabular-nums;line-height:1;
+  background:linear-gradient(180deg,#fff,#ffb380);-webkit-background-clip:text;background-clip:text;
+  -webkit-text-fill-color:transparent}
+.buffer-ready{font-size:20px;color:var(--ok);margin:20px 0;font-weight:700}
+.btn-approve{margin:36px auto 0;display:block;width:180px;padding:16px;border-radius:14px;border:none;
+  background:linear-gradient(90deg,var(--ok),#34d399);color:#04120a;font-size:18px;font-weight:800;
+  cursor:pointer;box-shadow:0 4px 20px rgba(74,222,128,.35);letter-spacing:2px}
+.btn-approve:active{transform:scale(.96)}
+.btn-resist{margin:14px auto 0;display:block;width:180px;padding:13px;border-radius:14px;
+  border:1px solid var(--border);background:var(--card);color:var(--text);font-size:14px;cursor:pointer}
+.btn-cancel{margin:26px auto 0;display:block;background:none;border:none;color:var(--muted);
+  font-size:13px;text-decoration:underline;cursor:pointer}
+
+/* 反馈浮层 */
+.toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 60px);transform:translateX(-50%) translateY(20px);
+  background:var(--card);border:1px solid var(--border);color:var(--text);padding:12px 20px;
+  border-radius:20px;font-size:14px;opacity:0;transition:.3s;z-index:50;pointer-events:none;
+  box-shadow:0 6px 24px rgba(0,0,0,.5);white-space:nowrap}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.good{border-color:rgba(74,222,128,.5)}
+.toast.bad{border-color:rgba(255,92,92,.5)}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ============ 主屏 ============ -->
+  <div id="view-main" class="view active">
+    <header>
+      <div class="brand">
+        <span class="fire">🔥</span>
+        <div>
+          <h1>熄火</h1>
+          <div class="sub" id="date-sub"></div>
+        </div>
+      </div>
+      <div class="gear" onclick="show('settings')">⚙️</div>
+    </header>
+
+    <div class="counter-wrap">
+      <div class="count-num" id="count-num">0</div>
+      <div class="count-label" id="count-label">今天已抽</div>
+      <div class="goal-bar"><div class="goal-fill" id="goal-fill" style="width:0%"></div></div>
+      <div class="goal-text" id="goal-text"></div>
+    </div>
+
+    <button class="btn-smoke" id="btn-smoke" onclick="onSmokeTap()">
+      抽一根
+      <span class="btn-hint" id="btn-hint"></span>
+    </button>
+
+    <div class="undo-row">
+      <button class="undo-btn" id="undo-btn" onclick="undoLast()" style="display:none">↩ 撤销上一根</button>
+    </div>
+
+    <div class="tl-title"><span id="tl-today">今日</span><span id="tl-count"></span></div>
+    <ul class="tl" id="timeline"></ul>
+
+    <div class="tl-title"><span>最近 7 天</span></div>
+    <div class="trend" id="trend"></div>
+  </div>
+
+  <!-- ============ 设置 ============ -->
+  <div id="view-settings" class="view">
+    <div class="set-head">
+      <div class="back-btn" onclick="show('main')">←</div>
+      <h2>设置</h2>
+    </div>
+
+    <div class="card">
+      <h3>🎯 每日目标</h3>
+      <div class="row">
+        <div>
+          <div class="lbl">每日上限</div>
+          <div class="hint">超过后计数变红提醒</div>
+        </div>
+        <input type="number" id="goal-input" min="1" max="100" value="20" onchange="onGoalChange(this.value)">
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>⏳ 等待缓冲</h3>
+      <div class="row">
+        <div>
+          <div class="lbl">申请后先等一会儿</div>
+          <div class="hint">点「申请抽烟」后倒计时，过了才能抽，给冲动冷却</div>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="buffer-toggle" onchange="onBufferToggle(this.checked)">
+          <span class="slider"></span>
+        </label>
+      </div>
+      <div class="row" id="buffer-min-row" style="display:none">
+        <div class="lbl">缓冲时长（分钟）</div>
+        <input type="number" id="buffer-min-input" min="1" max="60" value="3" onchange="onBufferMin(this.value)">
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>💾 数据</h3>
+      <button class="btn" onclick="exportData()">导出备份（JSON 文件）</button>
+      <button class="btn" onclick="document.getElementById('import-input').click()">导入备份</button>
+      <input type="file" id="import-input" accept=".json,application/json" style="display:none" onchange="importData(this)">
+      <button class="btn danger" onclick="clearAll()">清空全部数据</button>
+      <div class="hint" style="margin-top:8px">数据只存本机浏览器，换手机或清缓存会丢，记得定期导出备份。</div>
+    </div>
+
+    <div class="card">
+      <h3>ℹ️ 关于</h3>
+      <div class="row"><div class="lbl">版本</div><div id="app-version">V1.0</div></div>
+      <div class="hint">记录每一根，也放过每一根冲动。</div>
+    </div>
+  </div>
+
+  <!-- ============ 倒计时 ============ -->
+  <div id="view-buffer" class="view">
+    <div class="buffer-wrap">
+      <div class="buffer-note">你想抽一根</div>
+      <div class="buffer-gap" id="buffer-gap"></div>
+      <div class="buffer-timer" id="buffer-timer">03:00</div>
+      <div class="buffer-ready" id="buffer-ready" style="display:none">冲动已冷却，还要抽吗？</div>
+      <button class="btn-approve" id="btn-approve" style="display:none" onclick="approveSmoke()">抽，就这根</button>
+      <button class="btn-resist" id="btn-resist" onclick="resistSmoke()">忍住了，不抽了</button>
+      <button class="btn-cancel" onclick="cancelBuffer()">返回</button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+"use strict";
+const APP_VERSION = "V1.0";
+const LS_KEY = "smoke-tracker-v1";
+const dateSub = document.getElementById("date-sub");
+
+let state = { records: [], resisted: [], goal: 20, bufferEnabled: false, bufferMinutes: 3 };
+let bufferUntil = 0;      // 倒计时结束时间戳（0=未在倒计时）
+let bufferTimer = null;   // setInterval 句柄
+
+/* ---------- 工具 ---------- */
+function dayStr(ts){
+  const d = new Date(ts);
+  return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
+}
+function todayStr(){ return dayStr(Date.now()); }
+function countOn(day){
+  return state.records.filter(t => dayStr(t) === day).length;
+}
+function fmtTime(ts){
+  const d = new Date(ts);
+  return String(d.getHours()).padStart(2,"0") + ":" + String(d.getMinutes()).padStart(2,"0");
+}
+function fmtGap(ms){
+  const m = Math.round(ms / 60000);
+  if (m < 1) return "不到 1 分钟";
+  if (m < 60) return m + " 分钟";
+  const h = Math.floor(m/60), mm = m%60;
+  return h + " 小时 " + mm + " 分";
+}
+function toast(msg, kind){
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.className = "toast show" + (kind ? " " + kind : "");
+  clearTimeout(t._t);
+  t._t = setTimeout(() => t.className = "toast", 2200);
+}
+
+/* ---------- 持久化 ---------- */
+function save(){
+  try{ localStorage.setItem(LS_KEY, JSON.stringify(state)); }catch(e){}
+}
+function load(){
+  try{
+    const raw = localStorage.getItem(LS_KEY);
+    if(raw){
+      const o = JSON.parse(raw);
+      state = Object.assign({}, state, o);
+    }
+  }catch(e){}
+}
+function show(viewId){
+  ["main","settings","buffer"].forEach(id => document.getElementById("view-" + id).classList.toggle("active", id === viewId));
+  if(viewId !== "buffer") stopBufferTimer();
+  if(viewId === "main") renderMain();
+  if(viewId === "settings") renderSettings();
+}
+
+/* ---------- 主屏渲染 ---------- */
+function renderMain(){
+  const today = todayStr();
+  const n = countOn(today);
+  const numEl = document.getElementById("count-num");
+  numEl.textContent = n;
+  numEl.classList.toggle("over", n > state.goal);
+
+  const labelEl = document.getElementById("count-label");
+  labelEl.textContent = n === 0 ? "今天还没抽，继续保持" : (n === 1 ? "今天抽了 1 根" : "今天已抽 " + n + " 根");
+
+  // 目标
+  const fill = document.getElementById("goal-fill");
+  const pct = Math.min(100, Math.round(n / state.goal * 100));
+  fill.style.width = pct + "%";
+  fill.classList.toggle("over", n > state.goal);
+  const gt = document.getElementById("goal-text");
+  if(n > state.goal){
+    gt.textContent = "⚠️ 已超目标 " + (n - state.goal) + " 根";
+    gt.classList.add("over");
+  }else{
+    gt.textContent = "目标 " + state.goal + " 根 · 剩 " + (state.goal - n) + " 根";
+    gt.classList.remove("over");
+  }
+
+  // 主按钮
+  const btn = document.getElementById("btn-smoke");
+  const hint = document.getElementById("btn-hint");
+  btn.classList.toggle("over", n > state.goal);
+  if(state.bufferEnabled){
+    btn.innerHTML = '申请抽烟<span class="btn-hint">点后先等 ' + state.bufferMinutes + ' 分钟</span>';
+  }else{
+    btn.innerHTML = '抽一根<span class="btn-hint">点击记一根</span>';
+  }
+
+  // 撤销
+  document.getElementById("undo-btn").style.display = n > 0 ? "inline-block" : "none";
+
+  // 时间线
+  const tl = document.getElementById("timeline");
+  const recs = state.records.filter(t => dayStr(t) === today).sort((a,b)=>b-a);
+  document.getElementById("tl-today").textContent = "今日 · " + (function(){const d=new Date();return (d.getMonth()+1)+"月"+d.getDate()+"日";})();
+  document.getElementById("tl-count").textContent = recs.length ? recs.length + " 根" : "";
+  if(!recs.length){
+    tl.innerHTML = '<li class="empty">今天还没抽，点上面的按钮开始记录</li>';
+  }else{
+    let html = "";
+    recs.forEach((t, i) => {
+      const prev = recs[i+1];
+      const gap = prev ? fmtGap(t - prev) : "";
+      html += '<li><span class="dot"></span><span class="idx">第 ' + (recs.length - i) + ' 根</span>' +
+        '<span class="time">' + fmtTime(t) + '</span>' +
+        (gap ? '<span class="gap">隔 ' + gap + '</span>' : '<span class="gap"></span>') + '</li>';
+    });
+    tl.innerHTML = html;
+  }
+
+  // 7 天趋势
+  const trend = document.getElementById("trend");
+  let days = [];
+  for(let i = 6; i >= 0; i--){
+    const d = new Date(); d.setDate(d.getDate() - i);
+    days.push({ day: dayStr(d.getTime()), label: i === 0 ? "今天" : "周" + "日一二三四五六"[d.getDay()] });
+  }
+  const maxN = Math.max(1, ...days.map(d => countOn(d.day)));
+  trend.innerHTML = days.map(d => {
+    const c = countOn(d.day);
+    const h = Math.max(3, Math.round(c / maxN * 100));
+    return '<div class="day"><div class="v">' + (c || "") + '</div>' +
+      '<div class="bar' + (d.label === "今天" ? " today" : "") + '" style="height:' + h + '%"></div>' +
+      '<div class="lbl' + (d.label === "今天" ? " today" : "") + '">' + d.label + '</div></div>';
+  }).join("");
+}
+
+/* ---------- 主按钮动作 ---------- */
+function onSmokeTap(){
+  if(state.bufferEnabled){
+    startBuffer();
+  }else{
+    addRecord();
+  }
+}
+function addRecord(){
+  state.records.push(Date.now());
+  save();
+  renderMain();
+  // 涟漪
+  const btn = document.getElementById("btn-smoke");
+  const p = document.createElement("span");
+  p.className = "puff";
+  btn.appendChild(p);
+  setTimeout(() => p.remove(), 500);
+  const n = countOn(todayStr());
+  toast(n > state.goal ? "已记一根 · 今天 " + n + " 根，超目标了" : "已记一根 · 今天 " + n + " 根", n > state.goal ? "bad" : "good");
+}
+function undoLast(){
+  const today = todayStr();
+  const recs = state.records.filter(t => dayStr(t) === today);
+  if(!recs.length) return;
+  const last = Math.max(...recs);
+  state.records.splice(state.records.indexOf(last), 1);
+  save();
+  renderMain();
+  toast("已撤销上一根");
+}
+
+/* ---------- 等待缓冲 ---------- */
+function startBuffer(){
+  const now = Date.now();
+  const recs = state.records.filter(t => dayStr(t) === todayStr());
+  const gapEl = document.getElementById("buffer-gap");
+  if(recs.length){
+    gapEl.textContent = "离上一根已过 " + fmtGap(now - Math.max(...recs));
+  }else{
+    gapEl.textContent = "今天第一根";
+  }
+  bufferUntil = now + state.bufferMinutes * 60000;
+  document.getElementById("buffer-ready").style.display = "none";
+  document.getElementById("btn-approve").style.display = "none";
+  document.getElementById("btn-resist").style.display = "block";
+  show("buffer");
+  startBufferTimer();
+}
+function startBufferTimer(){
+  stopBufferTimer();
+  tickBuffer();
+  bufferTimer = setInterval(tickBuffer, 500);
+}
+function stopBufferTimer(){
+  if(bufferTimer){ clearInterval(bufferTimer); bufferTimer = null; }
+}
+function tickBuffer(){
+  const remain = bufferUntil - Date.now();
+  const timerEl = document.getElementById("buffer-timer");
+  if(remain <= 0){
+    timerEl.textContent = "00:00";
+    stopBufferTimer();
+    document.getElementById("buffer-ready").style.display = "block";
+    document.getElementById("btn-approve").style.display = "block";
+    document.getElementById("btn-resist").style.display = "none";
+    return;
+  }
+  const m = Math.floor(remain / 60000);
+  const s = Math.floor((remain % 60000) / 1000);
+  timerEl.textContent = String(m).padStart(2,"0") + ":" + String(s).padStart(2,"0");
+}
+function approveSmoke(){
+  addRecord();
+  bufferUntil = 0;
+  show("main");
+}
+function resistSmoke(){
+  state.resisted.push(Date.now());
+  save();
+  bufferUntil = 0;
+  show("main");
+  const todayResist = state.resisted.filter(t => dayStr(t) === todayStr()).length;
+  toast("忍住了 👍 今天已挡住 " + todayResist + " 次冲动", "good");
+}
+function cancelBuffer(){
+  bufferUntil = 0;
+  show("main");
+}
+
+/* ---------- 设置 ---------- */
+function renderSettings(){
+  document.getElementById("goal-input").value = state.goal;
+  document.getElementById("buffer-toggle").checked = state.bufferEnabled;
+  document.getElementById("buffer-min-input").value = state.bufferMinutes;
+  document.getElementById("buffer-min-row").style.display = state.bufferEnabled ? "flex" : "none";
+  document.getElementById("app-version").textContent = APP_VERSION;
+}
+function onGoalChange(v){
+  const n = parseInt(v, 10);
+  if(n && n > 0 && n <= 100){ state.goal = n; save(); renderMain(); }
+}
+function onBufferToggle(on){
+  state.bufferEnabled = on;
+  save();
+  document.getElementById("buffer-min-row").style.display = on ? "flex" : "none";
+  renderMain();
+}
+function onBufferMin(v){
+  const n = parseInt(v, 10);
+  if(n && n > 0 && n <= 60){ state.bufferMinutes = n; save(); }
+}
+
+/* ---------- 导出 / 导入 ---------- */
+function exportData(){
+  const blob = new Blob([JSON.stringify(state, null, 2)], {type: "application/json"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "熄火备份-" + todayStr() + ".json";
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast("已导出备份");
+}
+function importData(input){
+  const f = input.files[0];
+  if(!f) return;
+  const r = new FileReader();
+  r.onload = () => {
+    try{
+      const o = JSON.parse(r.result);
+      if(!Array.isArray(o.records)) throw new Error("bad");
+      if(confirm("导入会覆盖当前数据，确定？")){
+        state = Object.assign({ records: [], resisted: [], goal: 20, bufferEnabled: false, bufferMinutes: 3 }, o);
+        save(); renderMain(); renderSettings();
+        toast("导入成功");
+      }
+    }catch(e){
+      toast("文件格式不对", "bad");
+    }
+    input.value = "";
+  };
+  r.readAsText(f);
+}
+function clearAll(){
+  if(!confirm("确定清空所有吸烟记录？此操作不可恢复。")) return;
+  if(!confirm("再确认一次：真的要清空吗？")) return;
+  state = { records: [], resisted: [], goal: state.goal, bufferEnabled: state.bufferEnabled, bufferMinutes: state.bufferMinutes };
+  save(); renderMain(); renderSettings();
+  toast("已清空");
+}
+
+/* ---------- 启动 ---------- */
+dateSub.textContent = (function(){
+  const d = new Date();
+  return d.getFullYear() + "年" + (d.getMonth()+1) + "月" + d.getDate() + "日 · " + "周" + "日一二三四五六"[d.getDay()];
+})();
+load();
+renderMain();
+</script>
+</body>
+</html>
