@@ -333,7 +333,7 @@ header{display:flex;align-items:center;justify-content:space-between;
 
 <script>
 "use strict";
-const APP_VERSION = "V1.3";
+const APP_VERSION = "V1.4";
 const LS_KEY = "smoke-tracker-v1";
 const dateSub = document.getElementById("date-sub");
 
@@ -694,6 +694,36 @@ function clearAll(){
   toast("已清空");
 }
 
+/* ---------- Service Worker 注册（网络优先，绕过 GitHub max-age=600 缓存） ---------- */
+function initServiceWorker(){
+  try{
+    if(typeof navigator !== "undefined" && navigator.serviceWorker){
+      navigator.serviceWorker.register("sw.js", {updateViaCache:"none"}).catch(function(){});
+    }
+  }catch(e){}
+}
+
+/* ---------- 版本检测 + 自动清缓存强制刷新 ---------- */
+function checkVersion(){
+  try{
+    if(typeof fetch !== "function") return;
+    fetch("version.json?t=" + Date.now(), {cache:"no-store"})
+      .then(function(r){ return r.json(); })
+      .then(function(v){
+        if(!v || !v.version) return;
+        const cur = localStorage.getItem("__app_ver__");
+        if(cur && cur !== v.version){
+          // 检测到新版本：记录后强制刷新一次，SW 网络优先会拉到最新页面
+          localStorage.setItem("__app_ver__", v.version);
+          try{ location.reload(); }catch(e){}
+        }else if(!cur){
+          localStorage.setItem("__app_ver__", v.version);
+        }
+      })
+      .catch(function(){});
+  }catch(e){}
+}
+
 /* ---------- 启动 ---------- */
 dateSub.textContent = (function(){
   const d = new Date();
@@ -701,6 +731,8 @@ dateSub.textContent = (function(){
 })();
 load();
 renderMain();
+initServiceWorker();
+checkVersion();
 </script>
 </body>
 </html>
