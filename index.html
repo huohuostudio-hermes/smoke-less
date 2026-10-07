@@ -53,6 +53,7 @@ header{display:flex;align-items:center;justify-content:space-between;
   -webkit-text-fill-color:transparent;transition:color .3s}
 .count-num.over{background:linear-gradient(180deg,#ffd0c0,#ff5c5c);-webkit-background-clip:text;background-clip:text}
 .count-label{color:var(--muted);font-size:14px;margin-top:6px;letter-spacing:1px}
+.resist-count{color:var(--ok);font-size:13px;margin-top:8px;letter-spacing:1px;min-height:18px;font-weight:600}
 .goal-bar{width:min(240px,70%);height:6px;border-radius:3px;background:var(--card2);
   margin:18px auto 8px;overflow:hidden}
 .goal-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--accent),var(--accent2));
@@ -98,6 +99,7 @@ header{display:flex;align-items:center;justify-content:space-between;
   font-size:14px}
 .tl .dot{width:8px;height:8px;border-radius:50%;background:var(--accent);flex:none;
   box-shadow:0 0 6px rgba(255,122,47,.6)}
+.tl .dot.resist{background:var(--ok);box-shadow:0 0 6px rgba(74,222,128,.6)}
 .tl .idx{color:var(--muted);font-size:12px;width:44px;flex:none}
 .tl .time{font-variant-numeric:tabular-nums}
 .tl .gap{margin-left:auto;color:var(--muted);font-size:12px}
@@ -196,6 +198,7 @@ header{display:flex;align-items:center;justify-content:space-between;
     <div class="counter-wrap">
       <div class="count-num" id="count-num">0</div>
       <div class="count-label" id="count-label">今天已抽</div>
+      <div class="resist-count" id="resist-count"></div>
       <div class="goal-bar"><div class="goal-fill" id="goal-fill" style="width:0%"></div></div>
       <div class="goal-text" id="goal-text"></div>
     </div>
@@ -305,7 +308,7 @@ header{display:flex;align-items:center;justify-content:space-between;
 
 <script>
 "use strict";
-const APP_VERSION = "V1.1";
+const APP_VERSION = "V1.2";
 const LS_KEY = "smoke-tracker-v1";
 const dateSub = document.getElementById("date-sub");
 
@@ -372,6 +375,10 @@ function renderMain(){
   const labelEl = document.getElementById("count-label");
   labelEl.textContent = n === 0 ? "今天还没抽，继续保持" : (n === 1 ? "今天抽了 1 根" : "今天已抽 " + n + " 根");
 
+  // 忍住统计
+  const rn = state.resisted.filter(t => dayStr(t) === today).length;
+  document.getElementById("resist-count").textContent = rn > 0 ? "💪 忍住了 " + rn + " 次" : "";
+
   // 目标
   const fill = document.getElementById("goal-fill");
   const pct = Math.min(100, Math.round(n / state.goal * 100));
@@ -397,21 +404,32 @@ function renderMain(){
   // 撤销
   document.getElementById("undo-btn").style.display = n > 0 ? "inline-block" : "none";
 
-  // 时间线
+  // 时间线（抽烟 + 忍住，合并倒序）
   const tl = document.getElementById("timeline");
-  const recs = state.records.filter(t => dayStr(t) === today).sort((a,b)=>b-a);
+  const todaySmoke = state.records.filter(t => dayStr(t) === today).sort((a,b)=>a-b); // 升序算间隔
+  const todayResist = state.resisted.filter(t => dayStr(t) === today);
   document.getElementById("tl-today").textContent = "今日 · " + (function(){const d=new Date();return (d.getMonth()+1)+"月"+d.getDate()+"日";})();
-  document.getElementById("tl-count").textContent = recs.length ? recs.length + " 根" : "";
-  if(!recs.length){
+  document.getElementById("tl-count").textContent = todaySmoke.length ? todaySmoke.length + " 根" : "";
+  const smokeGap = {};
+  todaySmoke.forEach((t, i) => { smokeGap[t] = i > 0 ? fmtGap(t - todaySmoke[i-1]) : ""; });
+  const events = [
+    ...todaySmoke.map((t, i) => ({ts:t, type:"smoke", idx: todaySmoke.length - i, gap: smokeGap[t]})),
+    ...todayResist.map(t => ({ts:t, type:"resist"}))
+  ].sort((a,b) => b.ts - a.ts);
+  if(!events.length){
     tl.innerHTML = '<li class="empty">今天还没抽，点上面的按钮开始记录</li>';
   }else{
     let html = "";
-    recs.forEach((t, i) => {
-      const prev = recs[i+1];
-      const gap = prev ? fmtGap(t - prev) : "";
-      html += '<li><span class="dot"></span><span class="idx">第 ' + (recs.length - i) + ' 根</span>' +
-        '<span class="time">' + fmtTime(t) + '</span>' +
-        (gap ? '<span class="gap">隔 ' + gap + '</span>' : '<span class="gap"></span>') + '</li>';
+    events.forEach(ev => {
+      if(ev.type === "smoke"){
+        html += '<li><span class="dot"></span><span class="idx">第 ' + ev.idx + ' 根</span>' +
+          '<span class="time">' + fmtTime(ev.ts) + '</span>' +
+          (ev.gap ? '<span class="gap">隔 ' + ev.gap + '</span>' : '<span class="gap"></span>') + '</li>';
+      }else{
+        html += '<li><span class="dot resist"></span><span class="idx" style="color:var(--ok)">忍住了</span>' +
+          '<span class="time">' + fmtTime(ev.ts) + '</span>' +
+          '<span class="gap" style="color:var(--ok)">💪 没抽</span></li>';
+      }
     });
     tl.innerHTML = html;
   }
@@ -423,12 +441,11 @@ function renderMain(){
     const d = new Date(); d.setDate(d.getDate() - i);
     days.push({ day: dayStr(d.getTime()), label: i === 0 ? "今天" : "周" + "日一二三四五六"[d.getDay()] });
   }
-  const maxN = Math.max(1, ...days.map(d => countOn(d.day)));
   trend.innerHTML = days.map(d => {
     const c = countOn(d.day);
-    const h = Math.max(3, Math.round(c / maxN * 100));
+    const h = c === 0 ? 3 : Math.min(60, c * 5 + 3);
     return '<div class="day"><div class="v">' + (c || "") + '</div>' +
-      '<div class="bar' + (d.label === "今天" ? " today" : "") + '" style="height:' + h + '%"></div>' +
+      '<div class="bar' + (d.label === "今天" ? " today" : "") + '" style="height:' + h + 'px"></div>' +
       '<div class="lbl' + (d.label === "今天" ? " today" : "") + '">' + d.label + '</div></div>';
   }).join("");
 }

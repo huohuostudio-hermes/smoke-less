@@ -138,5 +138,30 @@ const dL2 = els.get("arc-left").getAttribute("d");
 ok(/0 0 0 188\.00 100\.00$/.test(dR2), "p=0.5 右弧到 3 点 (188,100)，实际: " + dR2);
 ok(/0 0 1 12\.00 100\.00$/.test(dL2), "p=0.5 左弧到 9 点 (12,100)，实际: " + dL2);
 
+// ---- 趋势柱子 + 忍住展示 ----
+// 15. 趋势柱子随数量线性增长（像素高度）
+R("state = { records: [], resisted: [], goal: 20, bufferEnabled: false, bufferMinutes: 3 }");
+ctx.renderMain();
+ok(/height:3px/.test(els.get("trend").innerHTML), "0 根时柱子 3px");
+ctx.addRecord();
+ok(/height:8px/.test(els.get("trend").innerHTML), "1 根时柱子 8px（随数量增长）");
+ctx.addRecord();
+ok(/height:13px/.test(els.get("trend").innerHTML), "2 根时柱子 13px（继续增长）");
+
+// 16. 忍住统计显示在主屏
+R("state = { records: [Date.now()], resisted: [Date.now()], goal: 20, bufferEnabled: false, bufferMinutes: 3 }");
+ctx.renderMain();
+ok(els.get("resist-count").textContent.indexOf("忍住了 1 次") >= 0, "主屏显示「忍住了 1 次」");
+
+// 17. 时间线合并抽烟 + 忍住
+const tlHtml = els.get("timeline").innerHTML;
+ok(tlHtml.indexOf("dot resist") >= 0, "时间线含忍住记录（绿色点）");
+ok(tlHtml.indexOf("第 1 根") >= 0, "时间线含抽烟记录");
+
+// 18. 无忍住时 resist-count 为空
+R("state = { records: [], resisted: [], goal: 20, bufferEnabled: false, bufferMinutes: 3 }");
+ctx.renderMain();
+ok(els.get("resist-count").textContent === "", "无忍住时统计为空");
+
 console.log("\n结果: " + pass + " 通过, " + fail + " 失败");
 process.exit(fail ? 1 : 0);

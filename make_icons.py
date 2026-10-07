@@ -25,7 +25,7 @@ def make_icon(size):
                         radius=radius, outline=ORANGE, width=ring_w)
 
     emoji = Image.open(EMOJI).convert("RGBA")
-    es = int(size * 0.56)
+    es = int(size * 0.80)
     emoji = emoji.resize((es, es), Image.Resampling.LANCZOS)
     img.alpha_composite(emoji, (int((size - es) / 2), int((size - es) / 2)))
     return img.convert("RGB")
