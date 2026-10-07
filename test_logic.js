@@ -179,6 +179,8 @@ ok(els.get("detail-summary").innerHTML.indexOf(">1<") >= 0, "详情汇总：忍�
 const dtl = els.get("detail-timeline").innerHTML;
 ok(dtl.indexOf("第 2 根") >= 0, "详情时间线含第 2 根");
 ok(dtl.indexOf("dot resist") >= 0, "详情时间线含忍住（绿点）");
+ok(dtl.indexOf("第一根烟") >= 0, "第一根（最早）标「第一根烟」");
+ok(dtl.indexOf("第一根烟") < dtl.indexOf("第 2 根"), "时间线升序：第一根在最上、第 2 根在下");
 ok(els.get("detail-title").textContent !== "", "详情标题非空");
 
 // 17. 主屏不再显示「N 根」（tl-count 已移除）
