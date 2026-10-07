@@ -32,6 +32,9 @@ body{
   background:radial-gradient(1200px 600px at 50% -200px, rgba(255,122,47,.14), transparent 60%), var(--bg);
   padding:env(safe-area-inset-top) 20px calc(env(safe-area-inset-bottom) + 20px);
 }
+/* 隐藏滚动条：页面仍可滚动，只是不显示上下滑动滑块 */
+html,body{scrollbar-width:none;-ms-overflow-style:none}
+html::-webkit-scrollbar,body::-webkit-scrollbar{display:none;width:0;height:0}
 #app{max-width:480px;margin:0 auto}
 
 /* ===== 顶栏 ===== */
@@ -123,8 +126,12 @@ header{display:flex;align-items:center;justify-content:space-between;
 
 /* ===== 设置页 ===== */
 .set-head{display:flex;align-items:center;gap:12px;padding:16px 0}
-.back-btn{width:36px;height:36px;border-radius:50%;border:1px solid var(--border);
-  background:var(--card);color:var(--text);font-size:16px;cursor:pointer}
+.back-btn{width:40px;height:40px;border-radius:50%;border:1px solid var(--border);
+  background:var(--card);color:var(--text);cursor:pointer;padding:0;
+  -webkit-appearance:none;appearance:none;font:inherit;
+  display:flex;align-items:center;justify-content:center;
+  transition:transform .18s, border-color .2s, color .2s}
+.back-btn:active{transform:translateX(-2px);border-color:var(--accent);color:var(--accent2)}
 .set-head h2{margin:0;font-size:18px}
 .card{background:var(--card);border:1px solid var(--border);border-radius:14px;
   padding:16px;margin:12px 0}
@@ -241,7 +248,11 @@ header{display:flex;align-items:center;justify-content:space-between;
   <!-- ============ 设置 ============ -->
   <div id="view-settings" class="view">
     <div class="set-head">
-      <div class="back-btn" onclick="show('main')">←</div>
+      <button class="back-btn" onclick="show('main')" aria-label="返回主页面">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M15 5l-7 7 7 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
       <h2>设置</h2>
     </div>
 
