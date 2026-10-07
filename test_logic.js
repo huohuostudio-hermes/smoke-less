@@ -156,11 +156,13 @@ ok(/A 88 88 0 0 1 100\.00 12\.00$/.test(dL), "p=1 左弧到顶点 (100,12)，实
 // ---- 计数颜色渐变 ----
 R("state.goal = 20");
 ctx.applyCountColor(0);
-ok(els.get("count-num").style.background.indexOf("hsl(140") >= 0, "0 根是绿色");
-ctx.applyCountColor(10);
-ok(els.get("count-num").style.background.indexOf("hsl(70") >= 0, "半程是黄绿色，实际: " + els.get("count-num").style.background);
+ok(els.get("count-num").style.backgroundImage.indexOf("hsl(120") >= 0, "0 根是绿色");
+ctx.applyCountColor(8);
+ok(els.get("count-num").style.backgroundImage.indexOf("hsl(30") >= 0, "40% 是橙色，实际: " + els.get("count-num").style.backgroundImage);
+ctx.applyCountColor(15);
+ok(els.get("count-num").style.backgroundImage.indexOf("hsl(275") >= 0, "75% 是紫色，实际: " + els.get("count-num").style.backgroundImage);
 ctx.applyCountColor(20);
-ok(els.get("count-num").style.background.indexOf("hsl(0,") >= 0, "20 根是红色");
+ok(els.get("count-num").style.backgroundImage.indexOf("hsl(0,") >= 0, "20 根是红色");
 
 // ---- 趋势 + 详情 ----
 // 15. 30 天趋势：30 根柱子 + 可点击进详情
