@@ -52,9 +52,9 @@ header{display:flex;align-items:center;justify-content:space-between;
 /* ===== 计数主区 ===== */
 .counter-wrap{text-align:center;padding:26px 0 10px}
 .count-num{font-size:96px;font-weight:800;line-height:1;letter-spacing:-2px;
-  background:linear-gradient(180deg,#fff,#ffb380);-webkit-background-clip:text;background-clip:text;
+  background:linear-gradient(180deg,#ff6b6b,#ff2d1a);-webkit-background-clip:text;background-clip:text;
   -webkit-text-fill-color:transparent;transition:color .3s}
-.count-num.over{background:linear-gradient(180deg,#ffd0c0,#ff5c5c);-webkit-background-clip:text;background-clip:text}
+.count-num.over{background:linear-gradient(180deg,#ff9c9c,#ff1414);-webkit-background-clip:text;background-clip:text}
 .count-label{color:var(--muted);font-size:14px;margin-top:6px;letter-spacing:1px}
 .resist-count{color:var(--ok);font-size:13px;margin-top:8px;letter-spacing:1px;min-height:18px;font-weight:600}
 .goal-bar{width:min(240px,70%);height:6px;border-radius:3px;background:var(--card2);
@@ -90,9 +90,12 @@ header{display:flex;align-items:center;justify-content:space-between;
 @keyframes puff{0%{transform:scale(.9);opacity:1}100%{transform:scale(1.6);opacity:0}}
 .puff{position:absolute;inset:0;border-radius:50%;border:2px solid var(--accent);animation:puff .5s ease-out forwards;pointer-events:none}
 
-.undo-row{text-align:center;min-height:30px}
-.undo-btn{font-size:13px;color:var(--muted);text-decoration:underline;cursor:pointer;background:none;border:none;padding:4px 8px}
-.undo-btn:active{color:var(--text)}
+.undo-row{display:flex;justify-content:center;gap:14px;min-height:44px;align-items:center}
+.undo-btn{width:40px;height:40px;border-radius:50%;border:1px solid var(--border);
+  background:var(--card);color:var(--muted);cursor:pointer;padding:0;
+  display:inline-flex;align-items:center;justify-content:center;
+  transition:color .2s, border-color .2s, transform .15s}
+.undo-btn:active{color:var(--text);border-color:var(--accent);transform:scale(.94)}
 
 /* ===== 时间线 ===== */
 .tl-title{font-size:12px;color:var(--muted);letter-spacing:2px;margin:26px 0 10px;
@@ -235,7 +238,18 @@ header{display:flex;align-items:center;justify-content:space-between;
     </button>
 
     <div class="undo-row">
-      <button class="undo-btn" id="undo-btn" onclick="undoLast()" style="display:none">↩ 撤销上一根</button>
+      <button class="undo-btn" id="undo-btn" onclick="undoLast()" style="display:none" aria-label="撤销上一根" title="撤销上一根">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M4 9h11a5 5 0 0 1 0 10H8" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M8 5l-4 4 4 4" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+      <button class="undo-btn" id="redo-btn" onclick="redoLast()" style="display:none" aria-label="反撤销" title="反撤销">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M20 9H9a5 5 0 0 0 0 10h7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M16 5l4 4-4 4" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
     </div>
 
     <div class="tl-title"><span id="tl-today">今日</span><span id="tl-count"></span></div>
@@ -319,13 +333,14 @@ header{display:flex;align-items:center;justify-content:space-between;
 
 <script>
 "use strict";
-const APP_VERSION = "V1.2";
+const APP_VERSION = "V1.3";
 const LS_KEY = "smoke-tracker-v1";
 const dateSub = document.getElementById("date-sub");
 
 let state = { records: [], resisted: [], goal: 20, bufferEnabled: false, bufferMinutes: 3 };
 let bufferUntil = 0;      // 倒计时结束时间戳（0=未在倒计时）
 let bufferTimer = null;   // setInterval 句柄
+let lastUndone = 0;       // 最近一次撤销的时间戳（0=无可反撤销）
 
 /* ---------- 工具 ---------- */
 function dayStr(ts){
@@ -412,8 +427,9 @@ function renderMain(){
     ? "长按点亮 · 到底后先等 " + state.bufferMinutes + " 分钟"
     : "长按点亮 · 到底记录";
 
-  // 撤销
-  document.getElementById("undo-btn").style.display = n > 0 ? "inline-block" : "none";
+  // 撤销 / 反撤销
+  document.getElementById("undo-btn").style.display = n > 0 ? "inline-flex" : "none";
+  document.getElementById("redo-btn").style.display = lastUndone ? "inline-flex" : "none";
 
   // 时间线（抽烟 + 忍住，合并倒序）
   const tl = document.getElementById("timeline");
@@ -463,7 +479,7 @@ function renderMain(){
 
 /* ---------- 主按钮动作（长按 + 火焰光环） ---------- */
 let pressStart = 0, pressRaf = null, pressDone = false;
-const PRESS_MS = 1100;   // 长按到底所需时长（毫秒）
+const PRESS_MS = 1600;   // 长按到底所需时长（毫秒）
 
 function onPressStart(e){
   if(e.cancelable) e.preventDefault();
@@ -527,6 +543,7 @@ function triggerSmoke(){
 }
 function addRecord(){
   state.records.push(Date.now());
+  lastUndone = 0;   // 新增记录后撤销栈失效，清掉可反撤销项
   save();
   renderMain();
   // 涟漪
@@ -544,9 +561,18 @@ function undoLast(){
   if(!recs.length) return;
   const last = Math.max(...recs);
   state.records.splice(state.records.indexOf(last), 1);
+  lastUndone = last;   // 记住撤销的这根，供反撤销恢复
   save();
   renderMain();
   toast("已撤销上一根");
+}
+function redoLast(){
+  if(!lastUndone) return;
+  state.records.push(lastUndone);
+  lastUndone = 0;
+  save();
+  renderMain();
+  toast("已恢复");
 }
 
 /* ---------- 等待缓冲 ---------- */

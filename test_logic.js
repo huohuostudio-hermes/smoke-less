@@ -63,11 +63,17 @@ ok(R("state.records.length") === 1, "addRecord 后 records=1");
 ok(R("dayStr(state.records[0])") === R("todayStr()"), "记录落在今天");
 ok(els.get("count-num").textContent === 1, "计数显示 1");
 
-// 3. 再加一根 + 撤销
+// 3. 再加一根 + 撤销 + 反撤销
 ctx.addRecord();
 ok(R("state.records.length") === 2, "第二根 records=2");
 ctx.undoLast();
 ok(R("state.records.length") === 1, "撤销后 records=1");
+ok(R("lastUndone") > 0, "撤销后 lastUndone 记录时间戳");
+ctx.redoLast();
+ok(R("state.records.length") === 2, "反撤销后 records=2");
+ok(R("lastUndone") === 0, "反撤销后 lastUndone 清空");
+ctx.redoLast();
+ok(R("state.records.length") === 2, "无可反撤销时 redoLast 不动作");
 
 // 4. 目标超了变红（再加 1 根 = 2 > goal 1）
 ctx.addRecord();
