@@ -30,7 +30,7 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
   -webkit-font-smoothing:antialiased;overflow-x:hidden;min-height:100%}
 body{
   background:radial-gradient(1200px 600px at 50% -200px, rgba(255,122,47,.14), transparent 60%), var(--bg);
-  padding:0 20px calc(env(safe-area-inset-bottom) + 20px);
+  padding:env(safe-area-inset-top) 20px calc(env(safe-area-inset-bottom) + 20px);
 }
 #app{max-width:480px;margin:0 auto}
 
@@ -62,17 +62,25 @@ header{display:flex;align-items:center;justify-content:space-between;
 .goal-text.over{color:var(--danger);font-weight:600}
 
 /* ===== 主按钮 ===== */
-.btn-smoke{margin:26px auto 6px;display:block;width:200px;height:200px;border-radius:50%;
+.btn-smoke{margin:26px auto 6px;width:200px;height:200px;border-radius:50%;
   border:none;cursor:pointer;position:relative;
-  background:radial-gradient(circle at 35% 30%, rgba(255,122,47,.35), rgba(255,122,47,.06));
-  box-shadow:0 0 0 2px var(--border), 0 0 40px rgba(255,122,47,.25), inset 0 0 40px rgba(255,122,47,.12);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+  background:radial-gradient(circle at 35% 30%, rgba(255,60,40,.30), rgba(255,122,47,.05));
+  box-shadow:0 0 0 2px var(--border), 0 0 40px rgba(255,122,47,.22), inset 0 0 40px rgba(255,122,47,.10);
   color:var(--text);font-size:22px;font-weight:700;letter-spacing:1px;
   transition:transform .12s, box-shadow .3s;
-  -webkit-user-select:none;user-select:none}
-.btn-smoke:active{transform:scale(.95);box-shadow:0 0 0 2px var(--border), 0 0 70px rgba(255,122,47,.45)}
-.btn-smoke .btn-hint{display:block;font-size:12px;font-weight:400;color:var(--muted);margin-top:6px;letter-spacing:1px}
+  -webkit-user-select:none;user-select:none;
+  touch-action:none;-webkit-touch-callout:none}
+.btn-smoke .btn-text{position:relative;z-index:2}
+.btn-smoke .btn-hint{display:block;font-size:12px;font-weight:400;color:var(--muted);letter-spacing:1px;position:relative;z-index:2}
 .btn-smoke.over{box-shadow:0 0 0 2px rgba(255,92,92,.4), 0 0 40px rgba(255,92,92,.3), inset 0 0 40px rgba(255,92,92,.14)}
 .btn-smoke.over .btn-hint{color:var(--danger)}
+
+/* 火焰光环（长按进度：从底部两侧包围到顶点） */
+.flame-ring{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.flame-ring .arc{fill:none;stroke:url(#flameGrad);stroke-width:11;stroke-linecap:round;
+  filter:url(#flameGlow);opacity:0;transition:opacity .18s}
+.flame-ring.on .arc{opacity:1}
 
 /* 点击涟漪 */
 @keyframes puff{0%{transform:scale(.9);opacity:1}100%{transform:scale(1.6);opacity:0}}
@@ -192,8 +200,27 @@ header{display:flex;align-items:center;justify-content:space-between;
       <div class="goal-text" id="goal-text"></div>
     </div>
 
-    <button class="btn-smoke" id="btn-smoke" onclick="onSmokeTap()">
-      抽一根
+    <button class="btn-smoke" id="btn-smoke"
+      onpointerdown="onPressStart(event)"
+      onpointerup="onPressEnd(event)"
+      onpointercancel="onPressEnd(event)"
+      oncontextmenu="return false">
+      <svg class="flame-ring" id="flame-ring" viewBox="0 0 200 200" aria-hidden="true">
+        <defs>
+          <linearGradient id="flameGrad" x1="0" y1="1" x2="0" y2="0">
+            <stop offset="0" stop-color="#ff2d1a"/>
+            <stop offset="0.55" stop-color="#ff5c2f"/>
+            <stop offset="1" stop-color="#ffb84a"/>
+          </linearGradient>
+          <filter id="flameGlow" x="-60%" y="-60%" width="220%" height="220%">
+            <feGaussianBlur stdDeviation="6" result="blur"/>
+            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+        </defs>
+        <path id="arc-right" class="arc" d=""/>
+        <path id="arc-left" class="arc" d=""/>
+      </svg>
+      <span class="btn-text" id="btn-text">抽一根</span>
       <span class="btn-hint" id="btn-hint"></span>
     </button>
 
@@ -278,7 +305,7 @@ header{display:flex;align-items:center;justify-content:space-between;
 
 <script>
 "use strict";
-const APP_VERSION = "V1.0";
+const APP_VERSION = "V1.1";
 const LS_KEY = "smoke-tracker-v1";
 const dateSub = document.getElementById("date-sub");
 
@@ -361,13 +388,11 @@ function renderMain(){
 
   // 主按钮
   const btn = document.getElementById("btn-smoke");
-  const hint = document.getElementById("btn-hint");
   btn.classList.toggle("over", n > state.goal);
-  if(state.bufferEnabled){
-    btn.innerHTML = '申请抽烟<span class="btn-hint">点后先等 ' + state.bufferMinutes + ' 分钟</span>';
-  }else{
-    btn.innerHTML = '抽一根<span class="btn-hint">点击记一根</span>';
-  }
+  document.getElementById("btn-text").textContent = state.bufferEnabled ? "申请抽烟" : "抽一根";
+  document.getElementById("btn-hint").textContent = state.bufferEnabled
+    ? "长按点亮 · 到底后先等 " + state.bufferMinutes + " 分钟"
+    : "长按点亮 · 到底记录";
 
   // 撤销
   document.getElementById("undo-btn").style.display = n > 0 ? "inline-block" : "none";
@@ -408,8 +433,64 @@ function renderMain(){
   }).join("");
 }
 
-/* ---------- 主按钮动作 ---------- */
-function onSmokeTap(){
+/* ---------- 主按钮动作（长按 + 火焰光环） ---------- */
+let pressStart = 0, pressRaf = null, pressDone = false;
+const PRESS_MS = 1100;   // 长按到底所需时长（毫秒）
+
+function onPressStart(e){
+  if(e.cancelable) e.preventDefault();
+  if(e.pointerId !== undefined && e.currentTarget && e.currentTarget.setPointerCapture){
+    try{ e.currentTarget.setPointerCapture(e.pointerId); }catch(err){}
+  }
+  if(pressRaf) return;
+  pressStart = Date.now();
+  pressDone = false;
+  document.getElementById("flame-ring").classList.add("on");
+  pressRaf = requestAnimationFrame(animatePress);
+}
+function animatePress(){
+  const p = Math.min(1, (Date.now() - pressStart) / PRESS_MS);
+  updateFlame(p);
+  if(p >= 1){
+    pressDone = true;
+    pressRaf = null;
+    triggerSmoke();
+    return;
+  }
+  pressRaf = requestAnimationFrame(animatePress);
+}
+function onPressEnd(e){
+  if(e.cancelable) e.preventDefault();
+  if(pressRaf){ cancelAnimationFrame(pressRaf); pressRaf = null; }
+  if(!pressDone){
+    updateFlame(0);
+    document.getElementById("flame-ring").classList.remove("on");
+  }
+  pressDone = false;
+}
+function updateFlame(p){
+  const cx = 100, cy = 100, r = 88;
+  const bx = cx, by = cy + r;
+  const arcR = document.getElementById("arc-right");
+  const arcL = document.getElementById("arc-left");
+  if(p <= 0.001){
+    arcR.setAttribute("d", "");
+    arcL.setAttribute("d", "");
+    return;
+  }
+  const aR = (90 - p * 180) * Math.PI / 180;
+  const xR = cx + r * Math.cos(aR), yR = cy + r * Math.sin(aR);
+  const aL = (90 + p * 180) * Math.PI / 180;
+  const xL = cx + r * Math.cos(aL), yL = cy + r * Math.sin(aL);
+  arcR.setAttribute("d", "M " + bx + " " + by + " A " + r + " " + r + " 0 0 0 " + xR.toFixed(2) + " " + yR.toFixed(2));
+  arcL.setAttribute("d", "M " + bx + " " + by + " A " + r + " " + r + " 0 0 1 " + xL.toFixed(2) + " " + yL.toFixed(2));
+}
+function triggerSmoke(){
+  updateFlame(1);
+  setTimeout(() => {
+    updateFlame(0);
+    document.getElementById("flame-ring").classList.remove("on");
+  }, 260);
   if(state.bufferEnabled){
     startBuffer();
   }else{
