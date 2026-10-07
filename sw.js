@@ -1,4 +1,4 @@
-const CACHE = "smoke-less-v6";
+const CACHE = "smoke-less-v7";
 const ASSETS = ["./", "./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png", "./icon-180.png"];
 
 self.addEventListener("install", e => {

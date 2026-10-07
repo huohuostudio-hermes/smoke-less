@@ -143,15 +143,21 @@ R("state = { records: [], resisted: [], goal: 1, bufferEnabled: false, bufferMin
 ctx.load();
 ok(R("state.goal") === 42 && R("state.bufferMinutes") === 7, "load 恢复持久化数据");
 
-// ---- 火焰光环 ----
-ctx.updateFlame(0);
-ok(els.get("arc-right").getAttribute("d") === "", "p=0 右弧为空");
-ok(els.get("arc-left").getAttribute("d") === "", "p=0 左弧为空");
-ctx.updateFlame(1);
-const dR = els.get("arc-right").getAttribute("d");
-const dL = els.get("arc-left").getAttribute("d");
-ok(/A 88 88 0 0 0 100\.00 12\.00$/.test(dR), "p=1 右弧到顶点 (100,12)，实际: " + dR);
-ok(/A 88 88 0 0 1 100\.00 12\.00$/.test(dL), "p=1 左弧到顶点 (100,12)，实际: " + dL);
+// ---- 打火机动画 ----
+ctx.updateLighter(0);
+ok(els.get("lid").style.transform === "rotateX(0.0deg)", "p=0 盖子闭合，实际: " + els.get("lid").style.transform);
+ok(els.get("wheel").style.transform === "rotate(0.0deg)", "p=0 滑轮未转");
+ctx.updateLighter(0.28);
+ok(els.get("lid").style.transform === "rotateX(-150.0deg)", "p=0.28 盖子完全掀开，实际: " + els.get("lid").style.transform);
+ctx.updateLighter(0.6);
+ok(els.get("wheel").style.transform !== "rotate(0.0deg)", "搓轮阶段滑轮旋转");
+ok(els.get("lighter").classList._set.has("sparking"), "搓轮阶段有火花");
+ctx.updateLighter(1);
+ok(!els.get("lighter").classList._set.has("sparking"), "到底后火花停");
+ctx.resetLighter();
+ok(els.get("lid").style.transform === "rotateX(0deg)", "reset 后盖子闭合");
+ok(els.get("wheel").style.transform === "rotate(0deg)", "reset 后滑轮归零");
+ok(!els.get("lighter").classList._set.has("lit"), "reset 后火苗熄灭");
 
 // ---- 趋势 + 详情 ----
 // 15. 30 天趋势：30 根柱子 + 可点击进详情
