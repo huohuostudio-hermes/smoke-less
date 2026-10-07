@@ -14,6 +14,9 @@ const BG = new Color("#0e0e10");
 const TRACK = new Color("#26262b");
 
 function fm() { return FileManager.iCloud() || FileManager.local(); }
+function scriptName() {
+  try { const n = Script.name(); return n || SCRIPT_NAME; } catch (e) { return SCRIPT_NAME; }
+}
 function load() {
   const f = fm();
   if (!f.fileExists(DATA_FILE)) return { records: [], resisted: [], goal: GOAL_DEFAULT };
@@ -68,7 +71,7 @@ function renderWidget() {
 
   const w = new ListWidget();
   w.backgroundColor = BG;
-  w.url = "scriptable:///run?scriptName=" + encodeURIComponent(SCRIPT_NAME) + "&action=record";
+  w.url = "scriptable:///run?scriptName=" + encodeURIComponent(scriptName()) + "&action=record";
 
   const title = w.addText("🔥 熄火");
   title.font = Font.mediumSystemFont(12);
