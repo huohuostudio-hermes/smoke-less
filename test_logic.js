@@ -146,16 +146,19 @@ ok(R("state.goal") === 42 && R("state.bufferMinutes") === 7, "load 恢复持久�
 // ---- 打火机动画 ----
 ctx.updateLighter(0);
 ok(els.get("lid").style.transform === "rotateX(0.0deg)", "p=0 盖子闭合，实际: " + els.get("lid").style.transform);
+ok(els.get("lid").style.opacity === "1", "p=0 盖子不透明");
 ok(els.get("wheel").style.transform === "rotate(0.0deg)", "p=0 滑轮未转");
-ctx.updateLighter(0.28);
-ok(els.get("lid").style.transform === "rotateX(-150.0deg)", "p=0.28 盖子完全掀开，实际: " + els.get("lid").style.transform);
+ctx.updateLighter(0.3);
+ok(els.get("lid").style.transform === "rotateX(-165.0deg)", "p=0.3 盖子完全掀开，实际: " + els.get("lid").style.transform);
+ok(els.get("lid").style.opacity === "0.00", "p=0.3 盖子翻到后面渐隐");
 ctx.updateLighter(0.6);
-ok(els.get("wheel").style.transform !== "rotate(0.0deg)", "搓轮阶段滑轮旋转");
+ok(els.get("wheel").style.transform !== "rotate(0.0deg)", "搓轮阶段齿轮旋转");
 ok(els.get("lighter").classList._set.has("sparking"), "搓轮阶段有火花");
 ctx.updateLighter(1);
 ok(!els.get("lighter").classList._set.has("sparking"), "到底后火花停");
 ctx.resetLighter();
 ok(els.get("lid").style.transform === "rotateX(0deg)", "reset 后盖子闭合");
+ok(els.get("lid").style.opacity === "1", "reset 后盖子恢复不透明");
 ok(els.get("wheel").style.transform === "rotate(0deg)", "reset 后滑轮归零");
 ok(!els.get("lighter").classList._set.has("lit"), "reset 后火苗熄灭");
 
@@ -180,7 +183,7 @@ const dtl = els.get("detail-timeline").innerHTML;
 ok(dtl.indexOf("第 2 根") >= 0, "详情时间线含第 2 根");
 ok(dtl.indexOf("dot resist") >= 0, "详情时间线含忍住（绿点）");
 ok(dtl.indexOf("第一根烟") >= 0, "第一根（最早）标「第一根烟」");
-ok(dtl.indexOf("第一根烟") < dtl.indexOf("第 2 根"), "时间线升序：第一根在最上、第 2 根在下");
+ok(dtl.indexOf("第 2 根") < dtl.indexOf("第一根烟"), "时间线降序：第 2 根在上、第一根烟在下");
 ok(els.get("detail-title").textContent !== "", "详情标题非空");
 
 // 17. 主屏不再显示「N 根」（tl-count 已移除）
