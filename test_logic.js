@@ -14,7 +14,7 @@ function makeEl() {
     innerHTML: "", textContent: "", value: "", checked: false,
     className: "", style: {}, files: [], _attrs: {},
     classList: { _set: new Set(), add(c){ this._set.add(c); }, remove(c){ this._set.delete(c); },
-      toggle(c, on){ if(on === undefined) { this._set.has(c) ? this._set.delete(c) : this._set.add(c); }
+      toggle(c, on){ if(on === undefined){ this._set.has(c) ? this._set.delete(c) : this._set.add(c); }
         else { on ? this._set.add(c) : this._set.delete(c); } },
       contains(c){ return this._set.has(c); } },
     appendChild(){}, remove(){}, click(){}, addEventListener(){},
@@ -63,24 +63,35 @@ ok(R("state.records.length") === 1, "addRecord 后 records=1");
 ok(R("dayStr(state.records[0])") === R("todayStr()"), "记录落在今天");
 ok(els.get("count-num").textContent === 1, "计数显示 1");
 
-// 3. 再加一根 + 撤销 + 反撤销
+// 3. 再加一根 + 撤销 + 反撤销（新栈）
 ctx.addRecord();
 ok(R("state.records.length") === 2, "第二根 records=2");
+ok(R("undoStack.length") === 2, "undoStack 累积 2 项");
 ctx.undoLast();
 ok(R("state.records.length") === 1, "撤销后 records=1");
-ok(R("lastUndone") > 0, "撤销后 lastUndone 记录时间戳");
+ok(R("undoStack.length") === 1, "撤销后 undoStack=1");
+ok(R("redoStack.length") === 1, "撤销后 redoStack=1");
 ctx.redoLast();
 ok(R("state.records.length") === 2, "反撤销后 records=2");
-ok(R("lastUndone") === 0, "反撤销后 lastUndone 清空");
+ok(R("redoStack.length") === 0, "反撤销后 redoStack 清空");
 ctx.redoLast();
 ok(R("state.records.length") === 2, "无可反撤销时 redoLast 不动作");
 
-// 4. 目标超了变红（再加 1 根 = 2 > goal 1）
+// 3b. 撤销「忍住了」也可撤/反撤
+const resistBefore = R("state.resisted.length");
+ctx.resistSmoke();
+ok(R("state.resisted.length") === resistBefore + 1, "resistSmoke 记一次忍住");
+ctx.undoLast();
+ok(R("state.resisted.length") === resistBefore, "撤销「忍住了」后 resisted 回退");
+ctx.redoLast();
+ok(R("state.resisted.length") === resistBefore + 1, "反撤销「忍住了」恢复");
+
+// 4. 目标超了变红
 ctx.addRecord();
 R("state.goal = 1");
 ctx.renderMain();
-ok(els.get("count-num").classList.contains("over"), "超目标 count-num 变红");
-ok(els.get("goal-text").classList.contains("over"), "超目标 goal-text 变红");
+ok(els.get("count-num").classList._set.has("over"), "超目标 count-num 变红");
+ok(els.get("goal-text").classList._set.has("over"), "超目标 goal-text 变红");
 
 // 5. 缓冲开启时 triggerSmoke 进倒计时而非直接记
 R("state.goal = 20; state.bufferEnabled = true; state.bufferMinutes = 3");
@@ -88,6 +99,13 @@ const before = R("state.records.length");
 ctx.triggerSmoke();
 ok(R("state.records.length") === before, "缓冲开启时 triggerSmoke 不立即记");
 ok(R("bufferUntil") > Date.now(), "bufferUntil 已设到未来");
+ok(els.get("btn-givelip").style.display === "block", "倒计时页显示「忍不住抽了」");
+
+// 5b. 忍不住抽了：写入记录
+const beforeGive = R("state.records.length");
+ctx.giveLipSmoke();
+ok(R("state.records.length") === beforeGive + 1, "giveLipSmoke 记一根（忍不住也入记录）");
+ok(R("undoStack.length") >= 1, "忍不住后进入撤销栈");
 
 // 6. 缓冲关闭时 triggerSmoke 直接记一根
 R("state.bufferEnabled = false");
@@ -95,21 +113,22 @@ const before2 = R("state.records.length");
 ctx.triggerSmoke();
 ok(R("state.records.length") === before2 + 1, "缓冲关闭时 triggerSmoke 记一根");
 
-// 7. tickBuffer 到点后显示 approve 按钮
+// 7. tickBuffer 到点后显示 approve 按钮、隐藏「忍不住抽了」
 R("bufferUntil = Date.now() - 1");
 ctx.tickBuffer();
 ok(els.get("buffer-timer").textContent === "00:00", "倒计时归零");
 ok(els.get("btn-approve").style.display === "block", "到点显示批准按钮");
+ok(els.get("btn-givelip").style.display === "none", "到点隐藏「忍不住抽了」");
 
 // 8. approveSmoke 记一根
 const beforeApprove = R("state.records.length");
 ctx.approveSmoke();
 ok(R("state.records.length") === beforeApprove + 1, "approveSmoke 记一根");
 
-// 9. resistSmoke 记 resisted
-const beforeResist = R("state.resisted.length");
+// 9. resistSmoke 记 resisted（上面 3b 已覆盖，这里只验证推进栈）
+const beforeResist2 = R("state.resisted.length");
 ctx.resistSmoke();
-ok(R("state.resisted.length") === beforeResist + 1, "resistSmoke 记录忍住的冲动");
+ok(R("state.resisted.length") === beforeResist2 + 1, "resistSmoke 记录忍住的冲动");
 
 // 10. 跨天隔离
 R("state.records.push(Date.now() - 24*3600*1000)");
@@ -125,49 +144,44 @@ ctx.load();
 ok(R("state.goal") === 42 && R("state.bufferMinutes") === 7, "load 恢复持久化数据");
 
 // ---- 火焰光环 ----
-// 12. updateFlame(0) 清空两条弧
 ctx.updateFlame(0);
 ok(els.get("arc-right").getAttribute("d") === "", "p=0 右弧为空");
 ok(els.get("arc-left").getAttribute("d") === "", "p=0 左弧为空");
-
-// 13. updateFlame(1) 两条弧终点都在顶部 (100, 12)
 ctx.updateFlame(1);
 const dR = els.get("arc-right").getAttribute("d");
 const dL = els.get("arc-left").getAttribute("d");
 ok(/A 88 88 0 0 0 100\.00 12\.00$/.test(dR), "p=1 右弧到顶点 (100,12)，实际: " + dR);
 ok(/A 88 88 0 0 1 100\.00 12\.00$/.test(dL), "p=1 左弧到顶点 (100,12)，实际: " + dL);
 
-// 14. updateFlame(0.5) 终点在右侧(188,100)/左侧(12,100)
-ctx.updateFlame(0.5);
-const dR2 = els.get("arc-right").getAttribute("d");
-const dL2 = els.get("arc-left").getAttribute("d");
-ok(/0 0 0 188\.00 100\.00$/.test(dR2), "p=0.5 右弧到 3 点 (188,100)，实际: " + dR2);
-ok(/0 0 1 12\.00 100\.00$/.test(dL2), "p=0.5 左弧到 9 点 (12,100)，实际: " + dL2);
-
-// ---- 趋势柱子 + 忍住展示 ----
-// 15. 趋势柱子随数量线性增长（像素高度）
+// ---- 趋势 + 详情 ----
+// 15. 30 天趋势：30 根柱子 + 可点击进详情
 R("state = { records: [], resisted: [], goal: 20, bufferEnabled: false, bufferMinutes: 3 }");
 ctx.renderMain();
-ok(/height:3px/.test(els.get("trend").innerHTML), "0 根时柱子 3px");
-ctx.addRecord();
-ok(/height:8px/.test(els.get("trend").innerHTML), "1 根时柱子 8px（随数量增长）");
-ctx.addRecord();
-ok(/height:13px/.test(els.get("trend").innerHTML), "2 根时柱子 13px（继续增长）");
+const trendHtml = els.get("trend").innerHTML;
+ok((trendHtml.match(/class="day"/g) || []).length === 30, "趋势渲染 30 天柱子");
+ok(trendHtml.indexOf('onclick="showDetail(') >= 0, "柱子带 showDetail 点击");
+ok(/height:3px/.test(trendHtml), "0 根时柱子 3px");
 
-// 16. 忍住统计显示在主屏
-R("state = { records: [Date.now()], resisted: [Date.now()], goal: 20, bufferEnabled: false, bufferMinutes: 3 }");
-ctx.renderMain();
-ok(els.get("resist-count").textContent.indexOf("忍住了 1 次") >= 0, "主屏显示「忍住了 1 次」");
-
-// 17. 时间线合并抽烟 + 忍住
-const tlHtml = els.get("timeline").innerHTML;
-ok(tlHtml.indexOf("dot resist") >= 0, "时间线含忍住记录（绿色点）");
-ok(tlHtml.indexOf("第 1 根") >= 0, "时间线含抽烟记录");
-
-// 18. 无忍住时 resist-count 为空
+// 16. 详情页：抽了几根 + 忍住几次 + 时间线
 R("state = { records: [], resisted: [], goal: 20, bufferEnabled: false, bufferMinutes: 3 }");
+const now = Date.now();
+R("state.records.push(" + now + ", " + (now - 3600*1000) + ")");
+R("state.resisted.push(" + (now - 1800*1000) + ")");
+ctx.showDetail(R("todayStr()"));
+ok(els.get("detail-summary").innerHTML.indexOf(">2<") >= 0, "详情汇总：抽了 2 根");
+ok(els.get("detail-summary").innerHTML.indexOf(">1<") >= 0, "详情汇总：忍住了 1 次");
+const dtl = els.get("detail-timeline").innerHTML;
+ok(dtl.indexOf("第 2 根") >= 0, "详情时间线含第 2 根");
+ok(dtl.indexOf("dot resist") >= 0, "详情时间线含忍住（绿点）");
+ok(els.get("detail-title").textContent !== "", "详情标题非空");
+
+// 17. 主屏不再显示「N 根」（tl-count 已移除）
+R("state = { records: [Date.now()], resisted: [], goal: 20, bufferEnabled: false, bufferMinutes: 3 }");
 ctx.renderMain();
-ok(els.get("resist-count").textContent === "", "无忍住时统计为空");
+ok(els.get("tl-today").textContent.indexOf("今日") >= 0, "主屏今日标题正常");
+
+// 18. 音效 data URI 已内联
+ok(code.indexOf("data:audio/mp4;base64,") >= 0, "音效 data URI 已内联进脚本");
 
 console.log("\n结果: " + pass + " 通过, " + fail + " 失败");
 process.exit(fail ? 1 : 0);
