@@ -166,6 +166,13 @@ ok(els.get("count-num").style.backgroundImage.indexOf("hsl(0,") >= 0, "20 根是
 ctx.applyCountColor(11);
 ok(els.get("count-num").style.backgroundImage.indexOf("hsl(30") >= 0, "11 根(55%) 是橙色（不再插值出青绿）");
 
+// 进度条颜色融入分段颜色语言
+R("state = { records: [], resisted: [], goal: 20, bufferEnabled: false, bufferMinutes: 3 }");
+const tNow = Date.now();
+R("state.records.push(" + tNow + ", " + (tNow - 60000) + ", " + (tNow - 120000) + ")");
+ctx.renderMain();
+ok(els.get("goal-fill").style.background.indexOf("hsl(120") >= 0, "进度条 3根(剩17) 是绿色，实际: " + els.get("goal-fill").style.background);
+
 // ---- 趋势 + 详情 ----
 // 15. 趋势：只显示有真实记录的日子 + 今天，不显示未来
 R("state = { records: [], resisted: [], goal: 20, bufferEnabled: false, bufferMinutes: 3 }");
