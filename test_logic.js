@@ -180,6 +180,8 @@ ctx.renderMain();
 trendHtml = els.get("trend").innerHTML;
 const yesterdayStr = R("dayStr(" + yTs + ")");
 ok(trendHtml.indexOf('data-day="' + yesterdayStr + '"') >= 0, "昨天的记录显示在趋势里");
+ok(trendHtml.indexOf("background:linear-gradient(180deg,hsl(") >= 0, "有记录的柱子颜色按 countColor 渐变");
+ok(trendHtml.indexOf('color:hsl(') >= 0, "数字颜色按 countColor 变色");
 const fut = new Date(); fut.setDate(fut.getDate() + 5);
 const futureStr = R("dayStr(" + fut.getTime() + ")");
 ok(trendHtml.indexOf('data-day="' + futureStr + '"') < 0, "未来日期不显示");
