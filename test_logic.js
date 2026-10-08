@@ -163,6 +163,8 @@ ctx.applyCountColor(15);
 ok(els.get("count-num").style.backgroundImage.indexOf("hsl(275") >= 0, "75% 是紫色，实际: " + els.get("count-num").style.backgroundImage);
 ctx.applyCountColor(20);
 ok(els.get("count-num").style.backgroundImage.indexOf("hsl(0,") >= 0, "20 根是红色");
+ctx.applyCountColor(11);
+ok(els.get("count-num").style.backgroundImage.indexOf("hsl(30") >= 0, "11 根(55%) 是橙色（不再插值出青绿）");
 
 // ---- 趋势 + 详情 ----
 // 15. 趋势：只显示有真实记录的日子 + 今天，不显示未来
