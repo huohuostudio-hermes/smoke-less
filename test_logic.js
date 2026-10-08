@@ -206,6 +206,7 @@ ok(els.get("detail-summary").innerHTML.indexOf(">2<") >= 0, "详情汇总：抽�
 ok(els.get("detail-summary").innerHTML.indexOf(">1<") >= 0, "详情汇总：忍住了 1 次");
 const dtl = els.get("detail-timeline").innerHTML;
 ok(dtl.indexOf("第 2 根") >= 0, "详情时间线含第 2 根");
+ok(dtl.indexOf('class="dot" style="background:hsl(') >= 0, "时间线抽烟点颜色按 countColor 变");
 ok(dtl.indexOf("dot resist") >= 0, "详情时间线含忍住（绿点）");
 ok(dtl.indexOf("第一根烟") >= 0, "第一根（最早）标「第一根烟」");
 ok(dtl.indexOf("第 2 根") < dtl.indexOf("第一根烟"), "时间线降序：第 2 根在上、第一根烟在下");
