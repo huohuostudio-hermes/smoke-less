@@ -165,13 +165,25 @@ ctx.applyCountColor(20);
 ok(els.get("count-num").style.backgroundImage.indexOf("hsl(0,") >= 0, "20 根是红色");
 
 // ---- 趋势 + 详情 ----
-// 15. 30 天趋势：30 根柱子 + 可点击进详情
+// 15. 趋势：只显示有真实记录的日子 + 今天，不显示未来
 R("state = { records: [], resisted: [], goal: 20, bufferEnabled: false, bufferMinutes: 3 }");
 ctx.renderMain();
-const trendHtml = els.get("trend").innerHTML;
-ok((trendHtml.match(/class="day"/g) || []).length === 30, "趋势渲染 30 天柱子");
+let trendHtml = els.get("trend").innerHTML;
+ok((trendHtml.match(/class="day"/g) || []).length === 1, "无记录时只显示今天 1 根柱子，实际: " + (trendHtml.match(/class="day"/g)||[]).length);
 ok(trendHtml.indexOf('onclick="showDetail(') >= 0, "柱子带 showDetail 点击");
 ok(/height:3px/.test(trendHtml), "0 根时柱子 3px");
+
+// 15b. 昨天的记录出现在趋势里、未来日期不出现
+const yTs = Date.now() - 24*3600*1000;
+R("state.records.push(" + yTs + ")");
+ctx.renderMain();
+trendHtml = els.get("trend").innerHTML;
+const yesterdayStr = R("dayStr(" + yTs + ")");
+ok(trendHtml.indexOf('data-day="' + yesterdayStr + '"') >= 0, "昨天的记录显示在趋势里");
+const fut = new Date(); fut.setDate(fut.getDate() + 5);
+const futureStr = R("dayStr(" + fut.getTime() + ")");
+ok(trendHtml.indexOf('data-day="' + futureStr + '"') < 0, "未来日期不显示");
+ok((trendHtml.match(/class="day"/g) || []).length === 2, "昨天+今天 = 2 根柱子，实际: " + (trendHtml.match(/class="day"/g)||[]).length);
 
 // 16. 详情页：抽了几根 + 忍住几次 + 时间线
 R("state = { records: [], resisted: [], goal: 20, bufferEnabled: false, bufferMinutes: 3 }");
