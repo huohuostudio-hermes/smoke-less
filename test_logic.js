@@ -28,6 +28,7 @@ const document = {
   getElementById(id){ if(!els.has(id)) els.set(id, makeEl()); return els.get(id); },
   createElement(){ return makeEl(); },
   querySelectorAll(){ return []; },
+  addEventListener(){},
 };
 const localStorage = {
   _d: {},
@@ -40,6 +41,7 @@ const ctx = {
   setTimeout, clearTimeout, setInterval, clearInterval,
   requestAnimationFrame(){ return 0; }, cancelAnimationFrame(){},
   confirm(){ return true; }, alert(){}, FileReader: function(){},
+  fetch: function(){ return Promise.resolve({ ok: true, json: function(){ return Promise.resolve([]); } }); },
   Blob: function(){}, URL: { createObjectURL(){return "";}, revokeObjectURL(){} },
 };
 vm.createContext(ctx);
