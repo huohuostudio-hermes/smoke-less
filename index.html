@@ -363,7 +363,7 @@ header{display:flex;align-items:center;justify-content:space-between;
 
 <script>
 "use strict";
-const APP_VERSION = "V1.20";
+const APP_VERSION = "V1.21";
 const LS_KEY = "smoke-tracker-v1";
 const SUPABASE_URL = "https://ibhwvuuvkuezozbvenxq.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImliaHd2dXV2a3Vlem96YnZlbnhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIyNTY1MDksImV4cCI6MjEwNzgzMjUwOX0.KOENEQdUOo_Q4rX6Iux6BjdBG3poxyhXVgim-3GVuQw";
@@ -467,6 +467,30 @@ function cloudReplaceAll(){
     if(rows.length) return sb("POST", "/rest/v1/smokes", rows);
   }).catch(function(){});
 }
+function cloudSaveGoal(n){
+  if(!SUPABASE_ON) return Promise.resolve();
+  return fetch(SUPABASE_URL + "/rest/v1/settings", {
+    method: "POST",
+    headers: {
+      "apikey": SUPABASE_KEY,
+      "Authorization": "Bearer " + SUPABASE_KEY,
+      "Content-Type": "application/json",
+      "Prefer": "resolution=merge-duplicates,return=minimal"
+    },
+    body: JSON.stringify({key: "goal", value: n})
+  }).catch(function(){});
+}
+function cloudLoadGoal(){
+  if(!SUPABASE_ON) return Promise.resolve();
+  return sb("GET", "/rest/v1/settings?select=value&key=eq.goal").then(function(rows){
+    if(!Array.isArray(rows) || !rows.length) return cloudSaveGoal(state.goal);
+    const g = parseInt(rows[0].value, 10);
+    if(g > 0 && g <= 100 && g !== state.goal){
+      state.goal = g;
+      save();
+    }
+  }).catch(function(){});
+}
 function cloudSync(){
   if(!SUPABASE_ON) return Promise.resolve();
   return sb("GET", "/rest/v1/smokes?select=type,ts&order=ts.asc&limit=100000").then(function(rows){
@@ -481,6 +505,7 @@ function cloudSync(){
     state.records = rows.filter(function(r){ return r.type === "smoke"; }).map(function(r){ return r.ts; });
     state.resisted = rows.filter(function(r){ return r.type === "resist"; }).map(function(r){ return r.ts; });
     save();
+    return cloudLoadGoal();
   }).catch(function(){});
 }
 function show(viewId){
@@ -821,7 +846,7 @@ function renderSettings(){
 }
 function onGoalChange(v){
   const n = parseInt(v, 10);
-  if(n && n > 0 && n <= 100){ state.goal = n; save(); renderMain(); }
+  if(n && n > 0 && n <= 100){ state.goal = n; save(); cloudSaveGoal(n); renderMain(); }
 }
 function onBufferToggle(on){
   state.bufferEnabled = on;
@@ -854,7 +879,7 @@ function importData(input){
       if(!Array.isArray(o.records)) throw new Error("bad");
       if(confirm("导入会覆盖当前数据，确定？")){
         state = Object.assign({ records: [], resisted: [], goal: 20, bufferEnabled: false, bufferMinutes: 3 }, o);
-        save(); cloudReplaceAll(); renderMain(); renderSettings();
+        save(); cloudReplaceAll(); cloudSaveGoal(state.goal); renderMain(); renderSettings();
         toast("导入成功");
       }
     }catch(e){
