@@ -363,7 +363,7 @@ header{display:flex;align-items:center;justify-content:space-between;
 
 <script>
 "use strict";
-const APP_VERSION = "V1.19";
+const APP_VERSION = "V1.20";
 const LS_KEY = "smoke-tracker-v1";
 const SUPABASE_URL = "https://ibhwvuuvkuezozbvenxq.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImliaHd2dXV2a3Vlem96YnZlbnhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIyNTY1MDksImV4cCI6MjEwNzgzMjUwOX0.KOENEQdUOo_Q4rX6Iux6BjdBG3poxyhXVgim-3GVuQw";
@@ -912,13 +912,13 @@ renderMain();
 cloudSync().then(function(){ renderMain(); });
 initServiceWorker();
 checkVersion();
-// 回到前台 / 定时同步：保持与电脑端一致（页面可见时每 60s 拉一次云端）
+// 回到前台 / 定时同步：保持与电脑端一致（页面可见时每 10s 拉一次云端，UF1 硬件记完更快上屏）
 document.addEventListener("visibilitychange", function(){
   if(document.visibilityState === "visible") cloudSync().then(function(){ renderMain(); });
 });
 setInterval(function(){
   if(document.visibilityState === "visible") cloudSync().then(function(){ renderMain(); });
-}, 60000);
+}, 10000);
 </script>
 </body>
 </html>
